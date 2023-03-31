@@ -1,4 +1,4 @@
-from math import floor
+from math import floor, ceil
 from copy import deepcopy
 
 L = 6
@@ -35,4 +35,21 @@ def generate_efficient_patterns():
         A_arr = deepcopy(A_arr_new)
 
 
-print(generate_efficient_patterns())
+def calculate_max_pattern_repetition(patterns_arr):
+    result = []
+    for pattern in patterns_arr:
+        max_rep = 0
+        for i in range(len(pattern)):
+            if pattern[i] > 0:
+                needed_rep = ceil(d_arr[i] / pattern[i])
+                if needed_rep > max_rep:
+                    max_rep = needed_rep
+        result.append(max_rep)
+    return result
+
+
+if __name__ == '__main__':
+    patterns = generate_efficient_patterns()
+    max_repeat = calculate_max_pattern_repetition(patterns)
+    print(patterns)
+    print(max_repeat)
