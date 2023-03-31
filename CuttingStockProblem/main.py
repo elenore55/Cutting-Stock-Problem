@@ -1,10 +1,13 @@
 from math import floor, ceil
 from copy import deepcopy
+from random import randint, shuffle  # inclusive range
 
-L = 6
+L = 10
 l_arr = [4, 3, 2]
 d_arr = [50, 30, 35]
 N = 3
+CHROMOSOME_LEN = 2 * N
+POPULATION_SIZE = 15
 
 
 def generate_efficient_patterns():
@@ -48,8 +51,23 @@ def calculate_max_pattern_repetition(patterns_arr):
     return result
 
 
+def initialize_population(max_repeat_arr):
+    init_population = []
+    pairs = list(zip(range(len(max_repeat_arr)), max_repeat_arr))
+    for i in range(POPULATION_SIZE):
+        chromosome = []
+        shuffle(pairs)
+        for j in range(N):
+            chromosome.append(pairs[j][0])
+            chromosome.append(randint(1, pairs[j][1]))
+        init_population.append(chromosome)
+    return init_population
+
+
 if __name__ == '__main__':
     patterns = generate_efficient_patterns()
     max_repeat = calculate_max_pattern_repetition(patterns)
+    initial_population = initialize_population(max_repeat)
     print(patterns)
     print(max_repeat)
+    print(initial_population)
