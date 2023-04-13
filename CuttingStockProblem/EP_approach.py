@@ -7,6 +7,8 @@ l_arr = [4, 3, 2]
 d_arr = [50, 30, 35]
 MAX_ITERATIONS = 100
 POPULATION_SIZE = 50
+SIZE_CHANGED_COST = 7
+STOCK_CHANGED_COST = 2
 
 
 def generate_initial_population(demand):
@@ -98,6 +100,82 @@ def tournament(all_chromosomes):
     return [num_wins[i][0] for i in range(POPULATION_SIZE)]
 
 
+def generate_initial_scheduling_population(stocks):
+    chromosome = get_scheduling_options(stocks)
+    population = []
+    for _ in range(POPULATION_SIZE):
+        shuffle(chromosome)
+        population.append(deepcopy(chromosome))
+    return population
+
+
+def get_scheduling_options(stocks):
+    result = []
+    for i, stock in enumerate(stocks):
+        numbers = set(stock)
+        for num in numbers:
+            result.append((i, num))
+    return result
+
+
+def calculate_scheduling_cost(chromosome):
+    cost = 0
+    for i in range(1, len(chromosome)):
+        previous = chromosome[i - 1]
+        current = chromosome[i]
+        if previous[0] != current[0]:
+            cost += STOCK_CHANGED_COST
+        if previous[1] != current[1]:
+            cost += SIZE_CHANGED_COST
+    return cost
+
+
+def generate_scheduling_child(chromosome, repeat=2):
+    child = deepcopy(chromosome)
+    for _ in range(repeat):
+        ind1 = randint(0, len(child) - 1)
+        ind2 = randint(0, len(child) - 1)
+        ind3 = randint(0, len(child) - 1)
+        child[ind1], child[ind2] = child[ind2], child[ind1]
+        child[ind1], child[ind3] = child[ind3], child[ind1]
+    return child
+
+
+def scheduling_tournament(all_chromosomes):
+    q = 5
+    num_wins = [[ch, 0] for ch in all_chromosomes]
+    costs = [calculate_scheduling_cost(ch) for ch in all_chromosomes]
+    for i in range(len(all_chromosomes)):
+        possible_opponents = all_chromosomes[:i] + all_chromosomes[i + 1:]
+        opponents_costs = costs[:i] + costs[i + 1:]
+        opponents_indices = sample(range(len(possible_opponents)), q)
+        for ind in opponents_indices:
+            if costs[i] < opponents_costs[ind]:
+                num_wins[i][1] += 1
+    num_wins.sort(key=lambda x: x[1], reverse=True)
+    return [num_wins[i][0] for i in range(POPULATION_SIZE)]
+
+
+def schedule(stocks):
+    # for stock in stocks:
+    #     stock.sort(reverse=True)
+    #     print(stock)
+    scheduling_population = generate_initial_scheduling_population(stocks)
+
+    iter_cnt = 0
+    while True:
+        iter_cnt += 1
+        children = []
+        for chromosome in scheduling_population:
+            children.append(generate_scheduling_child(chromosome))
+        scheduling_population = deepcopy(scheduling_tournament(scheduling_population + children))
+        if iter_cnt > MAX_ITERATIONS:
+            solution = scheduling_population[0]
+            print('COST')
+            print(calculate_scheduling_cost(solution))
+            break
+
+
 def main():
     demand = []
     for i in range(len(l_arr)):
@@ -113,15 +191,15 @@ def main():
 
         population = deepcopy(tournament(population + children))
         least_cost_for_iter = calculate_cost(population[0])
-        stocks = get_stocks_from_chromosome(population[0])
 
         if iter_cnt > MAX_ITERATIONS:
-            print('SOLUTION')
-            print(population[0])
+            solution = population[0]
+            stocks = get_stocks_from_chromosome(solution)
             print('COST')
             print(least_cost_for_iter)
             print('NUMBER OF STOCKS')
             print(len(stocks))
+            schedule(stocks)
             break
 
 
