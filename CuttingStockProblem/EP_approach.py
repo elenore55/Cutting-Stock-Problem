@@ -134,11 +134,35 @@ def generate_scheduling_child(chromosome, repeat=2):
     child = deepcopy(chromosome)
     for _ in range(repeat):
         ind1 = randint(0, len(child) - 1)
-        ind2 = randint(0, len(child) - 1)
-        ind3 = randint(0, len(child) - 1)
+        probabilities = calculate_cutting_probabilities(chromosome)
+        chosen_indices = choices(range(len(child)), weights=probabilities, k=2)
+        ind2 = chosen_indices[0]
+        ind3 = chosen_indices[1]
         child[ind1], child[ind2] = child[ind2], child[ind1]
         child[ind1], child[ind3] = child[ind3], child[ind1]
     return child
+
+
+def calculate_cutting_probabilities(chromosome):
+    result = []
+    count_of_same_adjacent = []
+    for i, pair in enumerate(chromosome):
+        size = pair[1]
+        if i == 0 or size == chromosome[i - 1][1]:
+            count = 1
+            for j in range(i + 1, len(chromosome)):
+                if chromosome[j][1] == size:
+                    count += 1
+                else:
+                    break
+            count_of_same_adjacent.append(count)
+        else:
+            count_of_same_adjacent.append(count_of_same_adjacent[-1])
+
+    normalization_sum = sum(1 / i for i in count_of_same_adjacent)
+    for i in count_of_same_adjacent:
+        result.append(1 / (i * normalization_sum))
+    return result
 
 
 def scheduling_tournament(all_chromosomes):
