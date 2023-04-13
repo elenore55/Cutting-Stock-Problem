@@ -1,14 +1,12 @@
 from random import shuffle, randint, choices, sample
 from copy import deepcopy
 from math import sqrt
+import matplotlib.pyplot as plt
 
 # from scheduling import schedule, naive_scheduling
 
-# L = 10
-# l_arr = [4, 3, 2]
-# d_arr = [50, 30, 35]
 MAX_ITERATIONS = 1000
-POPULATION_SIZE = 200
+POPULATION_SIZE = 100
 
 
 def generate_initial_population(demand):
@@ -22,12 +20,8 @@ def generate_initial_population(demand):
 def calculate_cost(chromosome, stock_length):
     stocks = get_stocks_from_chromosome(chromosome, stock_length)
     num_stocks = len(stocks)
-    wastage_arr = []
-    V_arr = []
-    for stock in stocks:
-        w = stock_length - sum(stock)
-        wastage_arr.append(w)
-        V_arr.append(int(w > 0))
+    wastage_arr = [stock_length - sum(stock) for stock in stocks]
+    V_arr = [int(waste > 0) for waste in wastage_arr]
     w_sum = sum(sqrt(wastage_arr[i] / stock_length) for i in range(num_stocks))
     V_sum = sum(V_arr[i] / num_stocks for i in range(num_stocks))
     return (w_sum + V_sum) / (num_stocks + 1)
@@ -74,25 +68,19 @@ def get_stocks_from_chromosome(chromosome, stock_length):
 
 
 def calculate_stocks_probabilities(stocks, stock_length):
-    probabilities = []
     wastage_arr = [stock_length - sum(stock) for stock in stocks]
     w_sum = sum(sqrt(1 / w) for w in wastage_arr if w > 0)
-    for i in range(len(stocks)):
-        if wastage_arr[i] == 0:
-            probabilities.append(0)
-        else:
-            probabilities.append(sqrt(1 / wastage_arr[i]) / w_sum)
-    return probabilities
+    return [sqrt(1 / waste) / w_sum if waste > 0 else 0 for waste in wastage_arr]
 
 
 def tournament(all_chromosomes, stock_length):
-    q = 5
+    Q = 10
     num_wins = [[ch, 0] for ch in all_chromosomes]
     costs = [calculate_cost(ch, stock_length) for ch in all_chromosomes]
     for i in range(len(all_chromosomes)):
         possible_opponents = all_chromosomes[:i] + all_chromosomes[i + 1:]
         opponents_costs = costs[:i] + costs[i + 1:]
-        opponents_indices = sample(range(len(possible_opponents)), q)
+        opponents_indices = sample(range(len(possible_opponents)), Q)
         for ind in opponents_indices:
             if costs[i] < opponents_costs[ind]:
                 num_wins[i][1] += 1
@@ -116,7 +104,7 @@ def read_data(file_name):
 
 def main():
     demand = []
-    stock_length, l_arr, d_arr = read_data('problem4')
+    stock_length, l_arr, d_arr = read_data('problem5')
     for i in range(len(l_arr)):
         demand.extend([l_arr[i]] * d_arr[i])
     population = generate_initial_population(demand)
@@ -124,21 +112,22 @@ def main():
     iter_cnt = 0
     num_iters_same_result = 0
     last_result = float('inf')
+    results = []
     while True:
         iter_cnt += 1
         children = []
         for chromosome in population:
             children.append(generate_child(chromosome, stock_length))
-
         population = deepcopy(tournament(population + children, stock_length))
         least_cost_for_iter = calculate_cost(population[0], stock_length)
+        results.append(least_cost_for_iter)
         if abs(least_cost_for_iter - last_result) < 0.00001:
             num_iters_same_result += 1
         else:
             num_iters_same_result = 0
         last_result = least_cost_for_iter
 
-        if iter_cnt > MAX_ITERATIONS or num_iters_same_result >= 50:
+        if least_cost_for_iter == 0 or iter_cnt > MAX_ITERATIONS or num_iters_same_result >= 30:
             solution = population[0]
             stocks = get_stocks_from_chromosome(solution, stock_length)
             print('ITERATION')
@@ -150,6 +139,10 @@ def main():
             # schedule(stocks)
             # naive_scheduling(stocks)
             break
+    plt.plot(range(1, len(results) + 1), results)
+    plt.xlabel('Iteration')
+    plt.ylabel('Best result')
+    plt.show()
 
 
 if __name__ == '__main__':
