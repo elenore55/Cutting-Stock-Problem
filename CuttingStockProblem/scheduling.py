@@ -6,6 +6,7 @@ POPULATION_SIZE = 50
 SIZE_CHANGED_COST = 7
 STOCK_CHANGED_COST = 2
 
+
 def generate_initial_scheduling_population(stocks):
     chromosome = get_scheduling_options(stocks)
     population = []
@@ -29,10 +30,10 @@ def calculate_scheduling_cost(chromosome):
     for i in range(1, len(chromosome)):
         previous = chromosome[i - 1]
         current = chromosome[i]
-        if previous[0] != current[0]:
-            cost += STOCK_CHANGED_COST
         if previous[1] != current[1]:
             cost += SIZE_CHANGED_COST
+        elif previous[0] != current[0]:
+            cost += STOCK_CHANGED_COST
     return cost
 
 
@@ -87,9 +88,6 @@ def scheduling_tournament(all_chromosomes):
 
 
 def schedule(stocks):
-    # for stock in stocks:
-    #     stock.sort(reverse=True)
-    #     print(stock)
     scheduling_population = generate_initial_scheduling_population(stocks)
 
     iter_cnt = 0
@@ -104,3 +102,19 @@ def schedule(stocks):
             print('COST')
             print(calculate_scheduling_cost(solution))
             break
+
+
+def naive_scheduling(stocks):
+    lengths = [4, 3, 2]
+    i = 0
+    cost = -STOCK_CHANGED_COST
+    while True:
+        length = lengths[i]
+        for j, stock in enumerate(stocks):
+            if length in stock:
+                cost += STOCK_CHANGED_COST
+        i += 1
+        if i == len(lengths):
+            break
+        cost += SIZE_CHANGED_COST
+    print(cost)

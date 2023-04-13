@@ -1,13 +1,14 @@
 from random import shuffle, randint, choices, sample
 from copy import deepcopy
 from math import sqrt
-from scheduling import schedule
 
-L = 10
-l_arr = [4, 3, 2]
-d_arr = [50, 30, 35]
-MAX_ITERATIONS = 100
-POPULATION_SIZE = 50
+# from scheduling import schedule, naive_scheduling
+
+# L = 10
+# l_arr = [4, 3, 2]
+# d_arr = [50, 30, 35]
+MAX_ITERATIONS = 1000
+POPULATION_SIZE = 200
 
 
 def generate_initial_population(demand):
@@ -18,26 +19,26 @@ def generate_initial_population(demand):
     return population
 
 
-def calculate_cost(chromosome):
-    stocks = get_stocks_from_chromosome(chromosome)
+def calculate_cost(chromosome, stock_length):
+    stocks = get_stocks_from_chromosome(chromosome, stock_length)
     num_stocks = len(stocks)
     wastage_arr = []
     V_arr = []
     for stock in stocks:
-        w = L - sum(stock)
+        w = stock_length - sum(stock)
         wastage_arr.append(w)
         V_arr.append(int(w > 0))
-    w_sum = sum(sqrt(wastage_arr[i] / L) for i in range(num_stocks))
+    w_sum = sum(sqrt(wastage_arr[i] / stock_length) for i in range(num_stocks))
     V_sum = sum(V_arr[i] / num_stocks for i in range(num_stocks))
     return (w_sum + V_sum) / (num_stocks + 1)
 
 
-def generate_child(chromosome, repeat=2):
+def generate_child(chromosome, stock_length, repeat=2):
     child = deepcopy(chromosome)
     for _ in range(repeat):
         ind1 = randint(0, len(child) - 1)
-        stocks = get_stocks_from_chromosome(child)
-        probabilities = calculate_stocks_probabilities(stocks)
+        stocks = get_stocks_from_chromosome(child, stock_length)
+        probabilities = calculate_stocks_probabilities(stocks, stock_length)
         chosen_stocks = choices(stocks, weights=probabilities, k=2)
         stock1_ind = stocks.index(chosen_stocks[0])
         stock2_ind = stocks.index(chosen_stocks[1])
@@ -55,12 +56,12 @@ def generate_child(chromosome, repeat=2):
     return child
 
 
-def get_stocks_from_chromosome(chromosome):
+def get_stocks_from_chromosome(chromosome, stock_length):
     stocks = []
     stock = []
     stock_sum = 0
     for gene in chromosome:
-        if stock_sum + gene <= L:
+        if stock_sum + gene <= stock_length:
             stock_sum += gene
             stock.append(gene)
         else:
@@ -72,9 +73,9 @@ def get_stocks_from_chromosome(chromosome):
     return stocks
 
 
-def calculate_stocks_probabilities(stocks):
+def calculate_stocks_probabilities(stocks, stock_length):
     probabilities = []
-    wastage_arr = [L - sum(stock) for stock in stocks]
+    wastage_arr = [stock_length - sum(stock) for stock in stocks]
     w_sum = sum(sqrt(1 / w) for w in wastage_arr if w > 0)
     for i in range(len(stocks)):
         if wastage_arr[i] == 0:
@@ -84,10 +85,10 @@ def calculate_stocks_probabilities(stocks):
     return probabilities
 
 
-def tournament(all_chromosomes):
+def tournament(all_chromosomes, stock_length):
     q = 5
     num_wins = [[ch, 0] for ch in all_chromosomes]
-    costs = [calculate_cost(ch) for ch in all_chromosomes]
+    costs = [calculate_cost(ch, stock_length) for ch in all_chromosomes]
     for i in range(len(all_chromosomes)):
         possible_opponents = all_chromosomes[:i] + all_chromosomes[i + 1:]
         opponents_costs = costs[:i] + costs[i + 1:]
@@ -99,30 +100,55 @@ def tournament(all_chromosomes):
     return [num_wins[i][0] for i in range(POPULATION_SIZE)]
 
 
+def read_data(file_name):
+    path = 'data/' + file_name
+    with open(path) as f:
+        lines = f.readlines()
+        stock_length = int(lines[0])
+        l_arr = []
+        d_arr = []
+        for i in range(1, len(lines)):
+            l, d = lines[i].split(',')
+            l_arr.append(int(l))
+            d_arr.append(int(d))
+        return stock_length, l_arr, d_arr
+
+
 def main():
     demand = []
+    stock_length, l_arr, d_arr = read_data('problem4')
     for i in range(len(l_arr)):
         demand.extend([l_arr[i]] * d_arr[i])
     population = generate_initial_population(demand)
 
     iter_cnt = 0
+    num_iters_same_result = 0
+    last_result = float('inf')
     while True:
         iter_cnt += 1
         children = []
         for chromosome in population:
-            children.append(generate_child(chromosome))
+            children.append(generate_child(chromosome, stock_length))
 
-        population = deepcopy(tournament(population + children))
-        least_cost_for_iter = calculate_cost(population[0])
+        population = deepcopy(tournament(population + children, stock_length))
+        least_cost_for_iter = calculate_cost(population[0], stock_length)
+        if abs(least_cost_for_iter - last_result) < 0.00001:
+            num_iters_same_result += 1
+        else:
+            num_iters_same_result = 0
+        last_result = least_cost_for_iter
 
-        if iter_cnt > MAX_ITERATIONS:
+        if iter_cnt > MAX_ITERATIONS or num_iters_same_result >= 50:
             solution = population[0]
-            stocks = get_stocks_from_chromosome(solution)
+            stocks = get_stocks_from_chromosome(solution, stock_length)
+            print('ITERATION')
+            print(iter_cnt)
             print('COST')
             print(least_cost_for_iter)
             print('NUMBER OF STOCKS')
             print(len(stocks))
-            schedule(stocks)
+            # schedule(stocks)
+            # naive_scheduling(stocks)
             break
 
 
