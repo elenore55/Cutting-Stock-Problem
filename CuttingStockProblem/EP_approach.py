@@ -104,7 +104,7 @@ def read_data(file_name):
 
 def main():
     demand = []
-    stock_length, l_arr, d_arr = read_data('problem5')
+    stock_length, l_arr, d_arr = read_data('problem3')
     for i in range(len(l_arr)):
         demand.extend([l_arr[i]] * d_arr[i])
     population = generate_initial_population(demand)
