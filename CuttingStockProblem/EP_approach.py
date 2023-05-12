@@ -3,8 +3,6 @@ from copy import deepcopy
 from math import sqrt
 import matplotlib.pyplot as plt
 
-# from scheduling import schedule, naive_scheduling
-
 MAX_ITERATIONS = 1000
 POPULATION_SIZE = 100
 
