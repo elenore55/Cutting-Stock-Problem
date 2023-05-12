@@ -19,42 +19,43 @@ class Stock(object):
         self.lengths_cut.append(length)
 
     def __len__(self):
-        return sum(self.stock)
+        return len(self.stock)
 
     def __getitem__(self, item):
         return self.stock[item]
 
+    def __str__(self):
+        return str(self.stock)
+
 
 def schedule(result, L):
     # result = [[10, 4, 7, 4], [7, 7, 6, 5], [4, 4, 10, 7], ...]
-    # stock_lengths = [10, 7, 6, 5, 4]
 
     for i, stock in enumerate(result):
         result[i] = Stock(stock, i, L)
     queue: List[Stock] = [result[0]]
 
     for i in range(1, len(result)):
-        insert_stock(queue, result[i])
+        queue = insert_stock(queue, result[i])
 
     iter_cnt = 0
     stocks_removed = []
     while len(queue) > 0:
         stock_for_cutting = queue[0]
         length_cutting = stock_for_cutting.stock[0]
-        while len(stock_for_cutting) > 1:
-            if stock_for_cutting[0] == length_cutting:
-                stock_for_cutting.cut(iter_cnt)
-                iter_cnt += 1
+        while len(stock_for_cutting) > 1 and stock_for_cutting[0] == length_cutting:
+            stock_for_cutting.cut(iter_cnt)
+            iter_cnt += 1
         if len(stock_for_cutting) == 1 and stock_for_cutting[0] == length_cutting and not stock_for_cutting.is_fully_used:
             stock_for_cutting.cut(iter_cnt)
             iter_cnt += 1
             stocks_removed.append(stock_for_cutting)
-            queue.remove(stock_for_cutting)
+            queue.pop(0)
         elif len(stock_for_cutting) == 1 and stock_for_cutting.is_fully_used:
             stocks_removed.append(stock_for_cutting)
-            queue.remove(stock_for_cutting)
+            queue.pop(0)
         else:
-            queue.remove(stock_for_cutting)
+            queue.pop(0)
             queue = insert_stock(queue, stock_for_cutting)
 
 
@@ -80,3 +81,9 @@ def insert_stock(queue: List[Stock], stock: Stock):
 
 def all_same_before_last(stock_arr: List[int]):
     return stock_arr[:-1].count(stock_arr[0]) == len(stock_arr[:-1])
+
+
+if __name__ == '__main__':
+    l = 25
+    arr = [[10, 4, 7, 4], [7, 7, 6, 5], [4, 4, 10, 7], [7, 7, 7, 4], [10, 10, 4], [7, 6, 6, 4]]
+    schedule(arr, l)
