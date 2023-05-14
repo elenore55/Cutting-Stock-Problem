@@ -86,8 +86,7 @@ def tournament(all_chromosomes, stock_length):
     return [num_wins[i][0] for i in range(POPULATION_SIZE)]
 
 
-def read_data(file_name):
-    path = 'data/' + file_name
+def read_data(path):
     with open(path) as f:
         lines = f.readlines()
         stock_length = int(lines[0])
@@ -100,9 +99,9 @@ def read_data(file_name):
         return stock_length, l_arr, d_arr
 
 
-def main():
+def optimize(problem_path):
     demand = []
-    stock_length, l_arr, d_arr = read_data('problem3')
+    stock_length, l_arr, d_arr = read_data(problem_path)
     for i in range(len(l_arr)):
         demand.extend([l_arr[i]] * d_arr[i])
     population = generate_initial_population(demand)
@@ -141,7 +140,8 @@ def main():
     plt.xlabel('Iteration')
     plt.ylabel('Best result')
     plt.show()
+    return stock_length, l_arr, d_arr, stocks
 
 
 if __name__ == '__main__':
-    main()
+    optimize('data/problem3.txt')

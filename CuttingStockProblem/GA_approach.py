@@ -199,8 +199,8 @@ def read_data(file_name):
         return stock_length, l_arr, d_arr
 
 
-def main():
-    stock_length, l_arr, d_arr = read_data('problem2')
+def optimize():
+    stock_length, l_arr, d_arr = read_data('problem2.txt')
     patterns = generate_efficient_patterns(stock_length, l_arr, d_arr)
     max_repeat = calculate_max_pattern_repetition(patterns, d_arr)
     initial_population = initialize_population(max_repeat, len(l_arr))
@@ -209,4 +209,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    optimize()
