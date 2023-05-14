@@ -1,7 +1,7 @@
 import random
 import tkinter as tk
 from tkinter import filedialog as fd
-from tkinter import ttk, LEFT, Frame
+from tkinter import ttk, LEFT, Frame, Scrollbar
 from typing import List, Dict
 
 from EP_approach import optimize
@@ -55,11 +55,13 @@ def display_requirements(L, lengths, demand):
     canvas = tk.Canvas(
         window,
         height=SCREEN_H - 100,
-        width=SCREEN_W // 2 - 10,
+        width=SCREEN_W // 2 - 40,
         bg='white'
     )
-
-    canvas.grid(row=1, column=0, padx=10, pady=5)
+    canvas.configure(scrollregion=canvas.bbox("all"))
+    canvas.grid(row=1, column=0, padx=5, pady=5)
+    scroll = Scrollbar(window, orient='vertical', command=canvas.yview)
+    scroll.grid(row=1, column=1, sticky='NE', pady=5)
 
     canvas.create_text((70, 15), text='Requirements', font='Helvetica 14 bold')
     canvas.create_rectangle(
@@ -97,11 +99,13 @@ def display_result(patterns: List[List[int]], colors: Dict[int, str], L):
     canvas = tk.Canvas(
         window,
         height=SCREEN_H - 100,
-        width=SCREEN_W // 2 - 10,
+        width=SCREEN_W // 2 - 40,
         bg='white'
     )
-
-    canvas.grid(row=1, column=2, padx=10, pady=5)
+    canvas.configure(scrollregion=canvas.bbox("all"))
+    canvas.grid(row=1, column=2, padx=5, pady=5)
+    scroll = Scrollbar(window, orient='vertical', command=canvas.yview)
+    scroll.grid(row=1, column=3, sticky='NE', pady=5)
 
     canvas.create_text((35, 15), text='Result', font='Helvetica 14 bold')
     i = 0
