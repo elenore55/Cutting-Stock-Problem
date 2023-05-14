@@ -6,162 +6,172 @@ from typing import List, Dict
 import queue
 import threading
 
-import EP_approach as ep
-
-# import GA_approach as ga
-
-window = tk.Tk()
-SCREEN_W = window.winfo_screenwidth()
-SCREEN_H = window.winfo_screenheight()
-MAIN_STOCK_LEN_SCALED = SCREEN_W // 3
-INITIAL_STOCK_X = 50
-INITIAL_STOCK_Y = 50
-STOCK_H = 20
-STOCK_SPACE = 10
-DEFAULT_COLORS = ['#e0edcc', '#e6d9cc', '#d1eded', '#e5d1ed', '#cfb8b8', '#fafcd4',
-                  '#d3cfff', '#ffd1fd', '#bac2b8', '#e6cbb3', '#c6afc7', '#ebeada',
-                  '#d4fae0', '#bfd4db', '#e6bee6', '#bdc7af', '#c7afb3', '#bdbedb',
-                  '#dbd1bd', '#b8cfd1', '#d1b8c1', '#eddfec', '#c0b8d1', '#ededdf']
-
-window.geometry(f'{SCREEN_W}x{SCREEN_H}')
-window.config(bg='#fff')
-window.title('Cutting stock problem')
-
-frame1 = Frame(window, width=100, height=150)
-frame1.grid(row=0, column=0, sticky='NW', padx=10, pady=10)
+from EP_approach import EP_Optimizer
 
 
-def scale(main_stock_len, stock_len, main_stock_len_scaled):
-    return int(main_stock_len_scaled * stock_len / main_stock_len)
+class LoadingScreen(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.title("Loading...")
+        self.geometry("200x100")
+        self.loading_label = tk.Label(self, text="Loading...")
+        self.loading_label.pack(expand=True)
 
 
-def select_file():
-    filetypes = (
-        ('text files', '*.txt'),
-        ('All files', '*.*')
-    )
+class Display(object):
 
-    filename = fd.askopenfilename(
-        title='Open a file',
-        initialdir='/',
-        filetypes=filetypes)
-    my_queue = queue.Queue()
-    thread = threading.Thread(target=ep.optimize, args=(filename, my_queue))
-    thread.start()
-    window.after(100, check_queue, my_queue)
+    def __init__(self):
+        self.window = tk.Tk()
+        self.loading_screen = None
+        self.SCREEN_W = self.window.winfo_screenwidth()
+        self.SCREEN_H = self.window.winfo_screenheight()
+        self.MAIN_STOCK_LEN_SCALED = self.SCREEN_W // 3
+        self.INITIAL_STOCK_X = 50
+        self.INITIAL_STOCK_Y = 50
+        self.STOCK_H = 20
+        self.STOCK_SPACE = 10
+        self.DEFAULT_COLORS = ['#e0edcc', '#e6d9cc', '#d1eded', '#e5d1ed', '#cfb8b8', '#fafcd4',
+                               '#d3cfff', '#ffd1fd', '#bac2b8', '#e6cbb3', '#c6afc7', '#ebeada',
+                               '#d4fae0', '#bfd4db', '#e6bee6', '#bdc7af', '#c7afb3', '#bdbedb',
+                               '#dbd1bd', '#b8cfd1', '#d1b8c1', '#eddfec', '#c0b8d1', '#ededdf']
 
+        self.window.geometry(f'{self.SCREEN_W}x{self.SCREEN_H}')
+        self.window.config(bg='#fff')
+        self.window.title('Cutting stock problem')
 
-def check_queue(my_queue):
-    if not my_queue.empty():
-        stock_len, l_arr, d_arr, result = my_queue.get(block=False)
-        display_everything(stock_len, l_arr, d_arr, result)
-    else:
-        window.after(100, check_queue, my_queue)
+    def scale(self, main_stock_len, stock_len):
+        return int(self.MAIN_STOCK_LEN_SCALED * stock_len / main_stock_len)
 
+    def select_file(self):
+        file_types = (
+            ('text files', '*.txt'),
+            ('All files', '*.*')
+        )
+        filename = fd.askopenfilename(
+            title='Open a file',
+            initialdir='/',
+            filetypes=file_types)
+        my_queue = queue.Queue()
+        self.loading_screen = LoadingScreen(self.window)
+        thread = threading.Thread(target=EP_Optimizer().optimize, args=(filename, my_queue))
+        thread.start()
+        self.window.after(100, self.check_queue, my_queue)
 
-def display_everything(stock_len, l_arr, d_arr, result):
-    colors = display_requirements(stock_len, l_arr, d_arr)
-    display_result(result, colors, stock_len)
-    window.mainloop()
+    def check_queue(self, my_queue):
+        if not my_queue.empty():
+            stock_len, l_arr, d_arr, result = my_queue.get(block=False)
+            self.display_content(stock_len, l_arr, d_arr, result)
+            self.loading_screen.destroy()
+        else:
+            self.window.after(100, self.check_queue, my_queue)
 
+    def display_prompt(self):
+        frame = Frame(self.window, width=100, height=150)
+        frame.grid(row=0, column=0, sticky='NW', padx=10, pady=10)
+        open_button = ttk.Button(
+            frame,
+            text='Open a File',
+            command=self.select_file
+        )
+        open_button.pack(side=LEFT)
 
-def display_requirements(L, lengths, demand):
-    N = len(lengths)
-    colors = DEFAULT_COLORS[:N]
-    if N > len(colors):
-        diff = N - len(colors)
-        for i in range(diff):
-            colors.append('#%06x' % random.randint(0x999999, 0xFFFFFF))
-    colors_dict = {lengths[i]: colors[i] for i in range(N)}
+    def display_requirements(self, L, lengths, demand):
+        N = len(lengths)
+        colors = self.DEFAULT_COLORS[:N]
+        if N > len(colors):
+            diff = N - len(colors)
+            for i in range(diff):
+                colors.append('#%06x' % random.randint(0x999999, 0xFFFFFF))
+        colors_dict = {lengths[i]: colors[i] for i in range(N)}
 
-    canvas = tk.Canvas(
-        window,
-        height=SCREEN_H - 100,
-        width=SCREEN_W // 2 - 40,
-        bg='white'
-    )
-    canvas.configure(scrollregion=canvas.bbox("all"))
-    canvas.grid(row=1, column=0, padx=5, pady=5)
-    scroll = Scrollbar(window, orient='vertical', command=canvas.yview)
-    scroll.grid(row=1, column=1, sticky='NE', pady=5)
+        canvas = self.create_canvas()
+        canvas.grid(row=1, column=0, padx=5, pady=5)
+        scroll = self.create_scrollbar(canvas)
+        scroll.grid(row=1, column=1, sticky='NE', pady=5)
 
-    canvas.create_text((70, 15), text='Requirements', font='Helvetica 14 bold')
-    canvas.create_rectangle(
-        INITIAL_STOCK_X, INITIAL_STOCK_Y,
-        INITIAL_STOCK_X + MAIN_STOCK_LEN_SCALED, INITIAL_STOCK_Y + STOCK_H,
-        outline='black',
-        fill='#333')
-    canvas.create_text((INITIAL_STOCK_X + 30, INITIAL_STOCK_Y + 10), text=str(L) + 'm', fill='#fff', font='Helvetica 10 bold')
-
-    for i in range(N):
+        canvas.create_text((70, 15), text='Requirements', font='Helvetica 14 bold')
         canvas.create_rectangle(
-            INITIAL_STOCK_X, INITIAL_STOCK_Y + (i + 1) * (STOCK_H + STOCK_SPACE),
-                             INITIAL_STOCK_X + scale(L, lengths[i], MAIN_STOCK_LEN_SCALED),
-                             INITIAL_STOCK_Y + (i + 1) * (STOCK_H + STOCK_SPACE) + STOCK_H,
+            self.INITIAL_STOCK_X, self.INITIAL_STOCK_Y,
+            self.INITIAL_STOCK_X + self.MAIN_STOCK_LEN_SCALED, self.INITIAL_STOCK_Y + self.STOCK_H,
             outline='black',
-            fill=colors[i])
-        canvas.create_text((INITIAL_STOCK_X + 30, INITIAL_STOCK_Y + (i + 1) * (STOCK_H + STOCK_SPACE) + 10),
-                           text=str(lengths[i]) + 'm', font='Helvetica 10 bold')
-        canvas.create_text((INITIAL_STOCK_X - 20, INITIAL_STOCK_Y + (i + 1) * (STOCK_H + STOCK_SPACE) + 10),
-                           text=str(demand[i]) + ' x  ', font='Helvetica 12 bold')
-    return colors_dict
+            fill='#333')
+        canvas.create_text((self.INITIAL_STOCK_X + 30, self.INITIAL_STOCK_Y + 10), text=str(L) + 'm', fill='#fff', font='Helvetica 10 bold')
 
-
-def display_result(patterns: List[List[int]], colors: Dict[int, str], L):
-    patterns_str = []
-    for pattern in patterns:
-        pattern.sort(reverse=True)
-        patterns_str.append(','.join([str(num) for num in pattern]))
-    patterns_cnt = {}
-    for pattern in patterns_str:
-        if pattern not in patterns_cnt:
-            patterns_cnt[pattern] = 0
-        patterns_cnt[pattern] += 1
-
-    canvas = tk.Canvas(
-        window,
-        height=SCREEN_H - 100,
-        width=SCREEN_W // 2 - 40,
-        bg='white'
-    )
-    canvas.configure(scrollregion=canvas.bbox("all"))
-    canvas.grid(row=1, column=2, padx=5, pady=5)
-    scroll = Scrollbar(window, orient='vertical', command=canvas.yview)
-    scroll.grid(row=1, column=3, sticky='NE', pady=5)
-
-    canvas.create_text((35, 15), text='Result', font='Helvetica 14 bold')
-    i = 0
-    for pattern, cnt in patterns_cnt.items():
-        canvas.create_text((INITIAL_STOCK_X - 20, INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE) + 10),
-                           text=str(cnt) + ' x  ', font='Helvetica 12 bold')
-
-        start_x = INITIAL_STOCK_X
-        for j, num in enumerate(pattern.split(',')):
-            num = int(num)
-            current_stock_len = scale(L, num, MAIN_STOCK_LEN_SCALED)
+        for i in range(N):
             canvas.create_rectangle(
-                start_x, INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE),
-                         start_x + current_stock_len, INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE) + STOCK_H,
+                self.INITIAL_STOCK_X, self.INITIAL_STOCK_Y + (i + 1) * (self.STOCK_H + self.STOCK_SPACE),
+                                      self.INITIAL_STOCK_X + self.scale(L, lengths[i]),
+                                      self.INITIAL_STOCK_Y + (i + 1) * (self.STOCK_H + self.STOCK_SPACE) + self.STOCK_H,
                 outline='black',
-                fill=colors[num]
-            )
-            canvas.create_text(
-                start_x + 30, INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE) + 10,
-                text=str(num) + 'm', font='Helvetica 10 bold'
-            )
-            start_x += current_stock_len
-        i += 1
+                fill=colors[i])
+            canvas.create_text((self.INITIAL_STOCK_X + 30, self.INITIAL_STOCK_Y + (i + 1) * (self.STOCK_H + self.STOCK_SPACE) + 10),
+                               text=str(lengths[i]) + 'm', font='Helvetica 10 bold')
+            canvas.create_text((self.INITIAL_STOCK_X - 20, self.INITIAL_STOCK_Y + (i + 1) * (self.STOCK_H + self.STOCK_SPACE) + 10),
+                               text=str(demand[i]) + ' x  ', font='Helvetica 12 bold')
+        return colors_dict
 
+    def display_result(self, patterns: List[List[int]], colors: Dict[int, str], L):
+        patterns_str = []
+        for pattern in patterns:
+            pattern.sort(reverse=True)
+            patterns_str.append(','.join([str(num) for num in pattern]))
+        patterns_cnt = {}
+        for pattern in patterns_str:
+            if pattern not in patterns_cnt:
+                patterns_cnt[pattern] = 0
+            patterns_cnt[pattern] += 1
 
-def display_prompt():
-    open_button = ttk.Button(
-        frame1,
-        text='Open a File',
-        command=select_file
-    )
-    open_button.pack(side=LEFT)
-    window.mainloop()
+        canvas = self.create_canvas()
+        canvas.grid(row=1, column=2, padx=5, pady=5)
+        scroll = self.create_scrollbar(canvas)
+        scroll.grid(row=1, column=3, sticky='NE', pady=5)
+
+        canvas.create_text((35, 15), text='Result', font='Helvetica 14 bold')
+        i = 0
+        for pattern, cnt in patterns_cnt.items():
+            canvas.create_text((self.INITIAL_STOCK_X - 20, self.INITIAL_STOCK_Y + i * (self.STOCK_H + self.STOCK_SPACE) + 10),
+                               text=str(cnt) + ' x  ', font='Helvetica 12 bold')
+            start_x = self.INITIAL_STOCK_X
+            for j, num in enumerate(pattern.split(',')):
+                num = int(num)
+                current_stock_len = self.scale(L, num)
+                canvas.create_rectangle(
+                    start_x, self.INITIAL_STOCK_Y + i * (self.STOCK_H + self.STOCK_SPACE),
+                             start_x + current_stock_len, self.INITIAL_STOCK_Y + i * (self.STOCK_H + self.STOCK_SPACE) + self.STOCK_H,
+                    outline='black',
+                    fill=colors[num]
+                )
+                canvas.create_text(
+                    start_x + 30, self.INITIAL_STOCK_Y + i * (self.STOCK_H + self.STOCK_SPACE) + 10,
+                    text=str(num) + 'm', font='Helvetica 10 bold'
+                )
+                start_x += current_stock_len
+            i += 1
+
+    def create_canvas(self):
+        canvas = tk.Canvas(
+            self.window,
+            height=self.SCREEN_H - 100,
+            width=self.SCREEN_W // 2 - 40,
+            bg='white'
+        )
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        return canvas
+
+    def create_scrollbar(self, canvas):
+        scroll = Scrollbar(self.window, orient='vertical', command=canvas.yview)
+        return scroll
+
+    def display_content(self, stock_len, l_arr, d_arr, result):
+        colors = self.display_requirements(stock_len, l_arr, d_arr)
+        self.display_result(result, colors, stock_len)
+
+    def display(self):
+        self.display_prompt()
+        self.window.mainloop()
 
 
 if __name__ == '__main__':
-    display_prompt()
+    display = Display()
+    display.display()
