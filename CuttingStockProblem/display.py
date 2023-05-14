@@ -14,6 +14,10 @@ INITIAL_STOCK_X = 50
 INITIAL_STOCK_Y = 50
 STOCK_H = 20
 STOCK_SPACE = 10
+DEFAULT_COLORS = ['#e0edcc', '#e6d9cc', '#d1eded', '#e5d1ed', '#cfb8b8', '#fafcd4',
+                  '#d3cfff', '#ffd1fd', '#bac2b8', '#e6cbb3', '#c6afc7', '#ebeada',
+                  '#d4fae0', '#bfd4db', '#e6bee6', '#bdc7af', '#c7afb3', '#bdbedb',
+                  '#dbd1bd', '#b8cfd1', '#d1b8c1', '#eddfec', '#c0b8d1', '#ededdf']
 
 window.geometry(f'{SCREEN_W}x{SCREEN_H}')
 window.config(bg='#fff')
@@ -49,7 +53,11 @@ def display_everything(stock_len, l_arr, d_arr, result):
 
 def display_requirements(L, lengths, demand):
     N = len(lengths)
-    colors = ['#%06x' % random.randint(0x999999, 0xFFFFFF) for _ in range(N)]
+    colors = DEFAULT_COLORS[:N]
+    if N > len(colors):
+        diff = N - len(colors)
+        for i in range(diff):
+            colors.append('#%06x' % random.randint(0x999999, 0xFFFFFF))
     colors_dict = {lengths[i]: colors[i] for i in range(N)}
 
     canvas = tk.Canvas(
@@ -69,16 +77,16 @@ def display_requirements(L, lengths, demand):
         INITIAL_STOCK_X + MAIN_STOCK_LEN_SCALED, INITIAL_STOCK_Y + STOCK_H,
         outline='black',
         fill='#333')
-    canvas.create_text((INITIAL_STOCK_X + 20, INITIAL_STOCK_Y + 10), text=str(L) + 'm', fill='#fff', font='Helvetica 10 bold')
+    canvas.create_text((INITIAL_STOCK_X + 30, INITIAL_STOCK_Y + 10), text=str(L) + 'm', fill='#fff', font='Helvetica 10 bold')
 
     for i in range(N):
         canvas.create_rectangle(
             INITIAL_STOCK_X, INITIAL_STOCK_Y + (i + 1) * (STOCK_H + STOCK_SPACE),
-            INITIAL_STOCK_X + scale(L, lengths[i], MAIN_STOCK_LEN_SCALED),
-            INITIAL_STOCK_Y + (i + 1) * (STOCK_H + STOCK_SPACE) + STOCK_H,
+                             INITIAL_STOCK_X + scale(L, lengths[i], MAIN_STOCK_LEN_SCALED),
+                             INITIAL_STOCK_Y + (i + 1) * (STOCK_H + STOCK_SPACE) + STOCK_H,
             outline='black',
             fill=colors[i])
-        canvas.create_text((INITIAL_STOCK_X + 20, INITIAL_STOCK_Y + (i + 1) * (STOCK_H + STOCK_SPACE) + 10),
+        canvas.create_text((INITIAL_STOCK_X + 30, INITIAL_STOCK_Y + (i + 1) * (STOCK_H + STOCK_SPACE) + 10),
                            text=str(lengths[i]) + 'm', font='Helvetica 10 bold')
         canvas.create_text((INITIAL_STOCK_X - 20, INITIAL_STOCK_Y + (i + 1) * (STOCK_H + STOCK_SPACE) + 10),
                            text=str(demand[i]) + ' x  ', font='Helvetica 12 bold')
@@ -119,10 +127,14 @@ def display_result(patterns: List[List[int]], colors: Dict[int, str], L):
             current_stock_len = scale(L, num, MAIN_STOCK_LEN_SCALED)
             canvas.create_rectangle(
                 start_x, INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE),
-                start_x + current_stock_len,
-                INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE) + STOCK_H,
+                         start_x + current_stock_len,
+                         INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE) + STOCK_H,
                 outline='black',
                 fill=colors[num]
+            )
+            canvas.create_text(
+                start_x + 30, INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE) + 10,
+                text=str(num) + 'm', font='Helvetica 10 bold'
             )
             start_x += current_stock_len
         i += 1
