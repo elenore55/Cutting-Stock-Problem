@@ -99,7 +99,7 @@ def read_data(path):
         return stock_length, l_arr, d_arr
 
 
-def optimize(problem_path):
+def optimize(problem_path, queue=None):
     demand = []
     stock_length, l_arr, d_arr = read_data(problem_path)
     for i in range(len(l_arr)):
@@ -140,6 +140,8 @@ def optimize(problem_path):
     plt.xlabel('Iteration')
     plt.ylabel('Best result')
     plt.show()
+    if queue is not None:
+        queue.put((stock_length, l_arr, d_arr, stocks))
     return stock_length, l_arr, d_arr, stocks
 
 

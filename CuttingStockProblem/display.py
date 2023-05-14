@@ -3,8 +3,12 @@ import tkinter as tk
 from tkinter import filedialog as fd
 from tkinter import ttk, LEFT, Frame, Scrollbar
 from typing import List, Dict
+import queue
+import threading
 
-from EP_approach import optimize
+import EP_approach as ep
+
+# import GA_approach as ga
 
 window = tk.Tk()
 SCREEN_W = window.winfo_screenwidth()
@@ -41,8 +45,18 @@ def select_file():
         title='Open a file',
         initialdir='/',
         filetypes=filetypes)
-    stock_len, l_arr, d_arr, result = optimize(filename)
-    display_everything(stock_len, l_arr, d_arr, result)
+    my_queue = queue.Queue()
+    thread = threading.Thread(target=ep.optimize, args=(filename, my_queue))
+    thread.start()
+    window.after(100, check_queue, my_queue)
+
+
+def check_queue(my_queue):
+    if not my_queue.empty():
+        stock_len, l_arr, d_arr, result = my_queue.get(block=False)
+        display_everything(stock_len, l_arr, d_arr, result)
+    else:
+        window.after(100, check_queue, my_queue)
 
 
 def display_everything(stock_len, l_arr, d_arr, result):
@@ -127,8 +141,7 @@ def display_result(patterns: List[List[int]], colors: Dict[int, str], L):
             current_stock_len = scale(L, num, MAIN_STOCK_LEN_SCALED)
             canvas.create_rectangle(
                 start_x, INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE),
-                         start_x + current_stock_len,
-                         INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE) + STOCK_H,
+                         start_x + current_stock_len, INITIAL_STOCK_Y + i * (STOCK_H + STOCK_SPACE) + STOCK_H,
                 outline='black',
                 fill=colors[num]
             )
