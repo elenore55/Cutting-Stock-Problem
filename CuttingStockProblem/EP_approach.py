@@ -87,6 +87,7 @@ class EP_Optimizer(object):
         return [num_wins[i][0] for i in range(self.POPULATION_SIZE)]
 
     def optimize(self, problem_path, queue=None):
+        self.demand = []
         self.stock_length, l_arr, d_arr = DataReader.read(problem_path)
         for i in range(len(l_arr)):
             self.demand.extend([l_arr[i]] * d_arr[i])

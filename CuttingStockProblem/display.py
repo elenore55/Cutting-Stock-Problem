@@ -15,7 +15,13 @@ class LoadingScreen(tk.Toplevel):
         super().__init__(parent)
         self.parent = parent
         self.title("Loading...")
-        self.geometry("200x100")
+        screen_width = self.parent.winfo_screenwidth()
+        screen_height = self.parent.winfo_screenheight()
+        width = 300
+        height = 150
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+        self.geometry(f'{width}x{height}+{x}+{y}')
         self.loading_label = tk.Label(self, text="Loading...")
         self.loading_label.pack(expand=True)
 
@@ -142,6 +148,8 @@ class Display(object):
             if pattern not in patterns_cnt:
                 patterns_cnt[pattern] = 0
             patterns_cnt[pattern] += 1
+        patterns_cnt_arr = [(pattern, cnt) for pattern, cnt in patterns_cnt.items()]
+        patterns_cnt_arr.sort(key=lambda x: sum([int(s) for s in x[0].split(',')]), reverse=True)
 
         canvas = self.create_canvas()
         canvas.grid(row=1, column=2, padx=5, pady=5)
@@ -150,7 +158,7 @@ class Display(object):
 
         canvas.create_text((35, 15), text='Result', font='Helvetica 14 bold')
         i = 0
-        for pattern, cnt in patterns_cnt.items():
+        for pattern, cnt in patterns_cnt_arr:
             canvas.create_text((self.INITIAL_STOCK_X - 20, self.INITIAL_STOCK_Y + i * (self.STOCK_H + self.STOCK_SPACE) + 10),
                                text=str(cnt) + ' x  ', font='Helvetica 12 bold')
             start_x = self.INITIAL_STOCK_X
