@@ -7,6 +7,7 @@ import queue
 import threading
 
 from EP_approach import EP_Optimizer
+from GA_approach import GA_Optimizer
 
 
 class LoadingScreen(tk.Toplevel):
@@ -31,14 +32,19 @@ class Display(object):
         self.INITIAL_STOCK_Y = 50
         self.STOCK_H = 20
         self.STOCK_SPACE = 10
-        self.DEFAULT_COLORS = ['#e0edcc', '#e6d9cc', '#d1eded', '#e5d1ed', '#cfb8b8', '#fafcd4',
-                               '#d3cfff', '#ffd1fd', '#bac2b8', '#e6cbb3', '#c6afc7', '#ebeada',
-                               '#d4fae0', '#bfd4db', '#e6bee6', '#bdc7af', '#c7afb3', '#bdbedb',
-                               '#dbd1bd', '#b8cfd1', '#d1b8c1', '#eddfec', '#c0b8d1', '#ededdf']
-
+        self.DEFAULT_COLORS = ['#e0edcc', '#e6d9cc', '#d1eded', '#e5d1ed', '#cfb8b8', '#fafcd4', '#d3cfff', '#ffd1fd', '#bac2b8', '#e6cbb3',
+                               '#c6afc7', '#ebeada', '#d4fae0', '#bfd4db', '#e6bee6', '#bdc7af', '#c7afb3', '#bdbedb', '#dbd1bd', '#b8cfd1',
+                               '#d1b8c1', '#eddfec', '#c0b8d1', '#ededdf']
         self.window.geometry(f'{self.SCREEN_W}x{self.SCREEN_H}')
         self.window.config(bg='#fff')
         self.window.title('Cutting stock problem')
+        self.var = tk.IntVar()
+        self.requirements_canvas = self.create_canvas()
+        self.result_canvas = self.create_canvas()
+        self.requirements_canvas.grid(row=1, column=0, padx=5, pady=5)
+        self.result_canvas.grid(row=1, column=2, padx=5, pady=5)
+        self.optimizer = EP_Optimizer()
+        self.chosen_file = None
 
     def scale(self, main_stock_len, stock_len):
         return int(self.MAIN_STOCK_LEN_SCALED * stock_len / main_stock_len)
@@ -48,13 +54,16 @@ class Display(object):
             ('text files', '*.txt'),
             ('All files', '*.*')
         )
-        filename = fd.askopenfilename(
+        self.chosen_file = fd.askopenfilename(
             title='Open a file',
             initialdir='/',
             filetypes=file_types)
+        self.reload()
+
+    def reload(self):
         my_queue = queue.Queue()
         self.loading_screen = LoadingScreen(self.window)
-        thread = threading.Thread(target=EP_Optimizer().optimize, args=(filename, my_queue))
+        thread = threading.Thread(target=self.optimizer.optimize, args=(self.chosen_file, my_queue))
         thread.start()
         self.window.after(100, self.check_queue, my_queue)
 
@@ -67,14 +76,26 @@ class Display(object):
             self.window.after(100, self.check_queue, my_queue)
 
     def display_prompt(self):
-        frame = Frame(self.window, width=100, height=150)
-        frame.grid(row=0, column=0, sticky='NW', padx=10, pady=10)
+        frame = Frame(self.window, width=self.SCREEN_W, height=150)
+        frame.grid(row=0, column=0, sticky='EW', columnspan=3, padx=10, pady=10)
         open_button = ttk.Button(
             frame,
             text='Open a File',
             command=self.select_file
         )
         open_button.pack(side=LEFT)
+        option_ep = tk.Radiobutton(frame, text='Evolutionary programming', variable=self.var, value=1, command=self.selected_option_changed)
+        option_ga = tk.Radiobutton(frame, text='Genetic algorithm', variable=self.var, value=2, command=self.selected_option_changed)
+        option_ga.pack(side=tk.RIGHT)
+        option_ep.pack(side=tk.RIGHT)
+        option_ep.select()
+
+    def selected_option_changed(self):
+        if self.var.get() == 2:
+            self.optimizer = GA_Optimizer()
+        else:
+            self.optimizer = EP_Optimizer()
+        self.reload()
 
     def display_requirements(self, L, lengths, demand):
         N = len(lengths)
