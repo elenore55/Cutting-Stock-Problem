@@ -1,6 +1,6 @@
 from math import floor, ceil
 from copy import deepcopy
-from random import randint, shuffle, random, choice
+from random import randint, shuffle, random, choice, choices
 import matplotlib.pyplot as plt
 from data_reader import DataReader
 
@@ -67,12 +67,12 @@ class GA_Optimizer(object):
     def evaluate_fitness(self, chromosome, patterns_arr):
         P = 2
         unsupplied_sum = 0
-        l_provided = [0] * len(self.l_arr)
+        l_provided = [0] * self.N
         for i in range(0, len(chromosome), 2):
             pattern = patterns_arr[chromosome[i]]
             for j in range(len(pattern)):
                 l_provided[j] += pattern[j] * chromosome[i + 1]
-        for i in range(len(self.l_arr)):
+        for i in range(self.N):
             num_unsupplied = self.d_arr[i] - l_provided[i]
             if num_unsupplied > 0:
                 unsupplied_sum += num_unsupplied * self.l_arr[i]
@@ -81,7 +81,7 @@ class GA_Optimizer(object):
         return S / (x_sum + P * unsupplied_sum)
 
     @staticmethod
-    def choose_parents(fitness_pairs):
+    def select_parents(fitness_pairs):
         n = len(fitness_pairs)
         max_val1 = max_val2 = float('-inf')
         index1 = index2 = None
@@ -94,6 +94,13 @@ class GA_Optimizer(object):
                 max_val2 = score
                 index2 = i
         return fitness_pairs[index1][0], fitness_pairs[index2][0]
+
+    @staticmethod
+    def select_parents2(fitness_pairs):
+        n = len(fitness_pairs)
+        probabilities_sum = n * (n + 1) / 2
+        probabilities = [i / probabilities_sum for i in range(n + 1, 1, -1)]
+        return choices([pair[0] for pair in fitness_pairs], weights=probabilities, k=2)
 
     @staticmethod
     def crossover(parent1, parent2):
@@ -150,7 +157,7 @@ class GA_Optimizer(object):
             last_result = best_result_for_iter
 
             for i in range(3, len(fitness_pairs), 2):
-                parent1, parent2 = self.choose_parents(fitness_pairs)
+                parent1, parent2 = self.select_parents2(fitness_pairs)
                 child1, child2 = self.crossover(parent1, parent2)
                 child1 = self.mutate(child1, max_repeat_arr)
                 child2 = self.mutate2(child2, max_repeat_arr, patterns_arr)
@@ -163,13 +170,7 @@ class GA_Optimizer(object):
             fitness_pairs.append((ch, self.evaluate_fitness(ch, patterns_arr)))
         fitness_pairs.sort(key=lambda x: x[1], reverse=True)
         chosen_pattern = fitness_pairs[0][0]
-        l_final = [0] * self.N
-        for i in range(0, len(chosen_pattern), 2):
-            p = patterns_arr[i]
-            for j in range(len(p)):
-                l_final[j] += chosen_pattern[i + 1] * p[j]
         print(fitness_pairs[0])
-        print(l_final)
         print(sum(chosen_pattern[i] for i in range(1, len(chosen_pattern), 2)))
         plt.plot(range(1, len(best_results) + 1), best_results)
         plt.xlabel('Iteration')
@@ -199,4 +200,4 @@ class GA_Optimizer(object):
 
 if __name__ == '__main__':
     optimizer = GA_Optimizer()
-    optimizer.optimize('data/problem3.txt')
+    optimizer.optimize('data/problem2.txt')
