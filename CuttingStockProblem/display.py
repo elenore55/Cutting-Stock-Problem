@@ -71,15 +71,16 @@ class Display(object):
         self.loading_screen = LoadingScreen(self.window)
         thread = threading.Thread(target=self.optimizer.optimize, args=(self.chosen_file, my_queue))
         thread.start()
-        self.window.after(100, self.check_queue, my_queue)
+        self.window.after(10, self.check_queue, my_queue)
 
     def check_queue(self, my_queue):
         if not my_queue.empty():
             stock_len, l_arr, d_arr, result = my_queue.get(block=False)
             self.display_content(stock_len, l_arr, d_arr, result)
             self.loading_screen.destroy()
+            self.window.after(10, self.check_queue, my_queue)
         else:
-            self.window.after(100, self.check_queue, my_queue)
+            self.window.after(10, self.check_queue, my_queue)
 
     def display_prompt(self):
         frame = Frame(self.window, width=self.SCREEN_W, height=150)

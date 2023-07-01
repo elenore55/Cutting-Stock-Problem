@@ -133,7 +133,7 @@ class GA_Optimizer(object):
                 chromosome[i + 1] = randint(1, repeat)
         return chromosome
 
-    def run(self, population, patterns_arr, max_repeat_arr, problem_path):
+    def run(self, population, patterns_arr, max_repeat_arr, problem_path, queue=None):
         start = time.time()
         best_results = []
         num_iters_same_result = 0
@@ -147,6 +147,7 @@ class GA_Optimizer(object):
             for ch in population:
                 fitness_pairs.append((ch, self.evaluate_fitness(ch, patterns_arr)))
             fitness_pairs.sort(key=lambda x: x[1], reverse=True)
+
             # Elitism 3
             next_generation = [fitness_pairs[0][0], fitness_pairs[1][0], fitness_pairs[2][0]]
             best_result_for_iter = fitness_pairs[0][1]
@@ -164,6 +165,19 @@ class GA_Optimizer(object):
                 num_iters_same_result = 0
             last_result = best_result_for_iter
 
+            stocks = []
+            chosen_pattern = fitness_pairs[0][0]
+            for i in range(0, len(chosen_pattern), 2):
+                compact_pattern = patterns_arr[chosen_pattern[i]]
+                actual_pattern = []
+                for j in range(self.N):
+                    actual_pattern.extend([self.l_arr[j]] * compact_pattern[j])
+                repeat = chosen_pattern[i + 1]
+                for j in range(repeat):
+                    stocks.append(actual_pattern)
+            if queue is not None:
+                queue.put((self.stock_length, self.l_arr, self.d_arr, stocks))
+
             for i in range(3, len(fitness_pairs), 2):
                 parent1, parent2 = self.select_parents2(fitness_pairs)
                 child1, child2 = self.crossover(parent1, parent2)
@@ -177,28 +191,17 @@ class GA_Optimizer(object):
         for ch in population:
             fitness_pairs.append((ch, self.evaluate_fitness(ch, patterns_arr)))
         fitness_pairs.sort(key=lambda x: x[1], reverse=True)
-        chosen_pattern = fitness_pairs[0][0]
         end_time = time.time()
-        # print(fitness_pairs[0])
-        # print(sum(chosen_pattern[i] for i in range(1, len(chosen_pattern), 2)))
+
         plt.plot(range(1, len(best_results) + 1), best_results)
         plt.xlabel('Iteration')
         plt.ylabel('Fitness')
         plt.show()
-        stocks = []
-        for i in range(0, len(chosen_pattern), 2):
-            compact_pattern = patterns_arr[chosen_pattern[i]]
-            actual_pattern = []
-            for j in range(self.N):
-                actual_pattern.extend([self.l_arr[j]] * compact_pattern[j])
-            repeat = chosen_pattern[i + 1]
-            for j in range(repeat):
-                stocks.append(actual_pattern)
+
         # print(stocks)
         # with open('best_config_ga.csv', 'a') as file:
         #     file.write(
         #         f'{self.POPULATION_SIZE},{self.penalty},{self.mutation_rate},{problem_path},{len(stocks)},{fitness_pairs[0][1]},{iter_cnt},{end_time - start}\n')
-        return stocks
 
     def optimize(self, problem_path, queue=None):
         self.stock_length, self.l_arr, self.d_arr = DataReader.read(problem_path)
@@ -206,9 +209,7 @@ class GA_Optimizer(object):
         patterns = self.generate_efficient_patterns()
         max_repeat = self.calculate_max_pattern_repetition(patterns)
         initial_population = self.initialize_population(max_repeat)
-        stocks = self.run(initial_population, patterns, max_repeat, problem_path)
-        if queue is not None:
-            queue.put((self.stock_length, self.l_arr, self.d_arr, stocks))
+        self.run(initial_population, patterns, max_repeat, problem_path, queue)
 
 
 if __name__ == '__main__':

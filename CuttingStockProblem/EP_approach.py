@@ -120,13 +120,13 @@ class EP_Optimizer(object):
             population = deepcopy(self.tournament(population + children))
             least_cost_for_iter = self.calculate_cost(population[0])
             results.append(least_cost_for_iter)
+            if queue is not None:
+                queue.put((self.stock_length, l_arr, d_arr, self.get_stocks_from_chromosome(population[0])))
             if abs(least_cost_for_iter - last_result) < 0.00001:
                 num_iters_same_result += 1
             else:
                 num_iters_same_result = 0
             last_result = least_cost_for_iter
-            # if least_cost_for_iter == 0:
-            #     print('COST IS ZERO')
 
             if least_cost_for_iter == 0 or iter_cnt > self.MAX_ITERATIONS or num_iters_same_result >= 50:
                 solution = population[0]
@@ -143,8 +143,7 @@ class EP_Optimizer(object):
         plt.xlabel('Iteration')
         plt.ylabel('Fitness')
         plt.show()
-        if queue is not None:
-            queue.put((self.stock_length, l_arr, d_arr, stocks))
+
         # with open('best_config_ep2.csv', 'a') as file:
         #     file.write(
         #         f'{self.q},{self.num_3ps},{self.POPULATION_SIZE},{self.gene_choice},{problem_path},{len(stocks)},{least_cost_for_iter},{iter_cnt},{end_time - start}\n')
