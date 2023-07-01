@@ -3,17 +3,20 @@ from copy import deepcopy
 from random import randint, shuffle, random, choice, choices
 import matplotlib.pyplot as plt
 from data_reader import DataReader
+import time
 
 
 class GA_Optimizer(object):
 
-    def __init__(self):
+    def __init__(self, population_size=300, penalty=2, mutation_rate=0.1):
         self.MAX_ITERATIONS = 2000
-        self.POPULATION_SIZE = 300
+        self.POPULATION_SIZE = population_size
         self.stock_length = None
         self.l_arr = []
         self.d_arr = []
         self.N = None
+        self.penalty = penalty
+        self.mutation_rate = mutation_rate
 
     def generate_efficient_patterns(self):
         result = []
@@ -65,7 +68,7 @@ class GA_Optimizer(object):
         return init_population
 
     def evaluate_fitness(self, chromosome, patterns_arr):
-        P = 2
+        P = self.penalty
         unsupplied_sum = 0
         l_provided = [0] * self.N
         for i in range(0, len(chromosome), 2):
@@ -121,22 +124,24 @@ class GA_Optimizer(object):
                 chromosome[i] = randint(1, repeat)
         return chromosome
 
-    @staticmethod
-    def mutate2(chromosome, max_repeat_arr, patterns):
+    def mutate2(self, chromosome, max_repeat_arr, patterns):
         for i in range(0, len(chromosome), 2):
-            if random() < 0.1:
+            if random() < self.mutation_rate:
                 new_pattern_index = randint(0, len(patterns) - 1)
                 repeat = max_repeat_arr[new_pattern_index]
                 chromosome[i] = new_pattern_index
                 chromosome[i + 1] = randint(1, repeat)
         return chromosome
 
-    def run(self, population, patterns_arr, max_repeat_arr):
+    def run(self, population, patterns_arr, max_repeat_arr, problem_path):
+        start = time.time()
         best_results = []
         num_iters_same_result = 0
         last_result = float('inf')
+        iter_cnt = self.MAX_ITERATIONS
         for count in range(self.MAX_ITERATIONS):
             if num_iters_same_result >= 100:
+                iter_cnt = count
                 break
             fitness_pairs = []
             for ch in population:
@@ -145,6 +150,9 @@ class GA_Optimizer(object):
             # Elitism 3
             next_generation = [fitness_pairs[0][0], fitness_pairs[1][0], fitness_pairs[2][0]]
             best_result_for_iter = fitness_pairs[0][1]
+            if best_result_for_iter == 1:
+                iter_cnt = count
+                break
 
             best_results.append(best_result_for_iter)
             # sum_of_fitness = sum(fitness_pairs[i][1] for i in range(2, len(fitness_pairs)))
@@ -170,11 +178,12 @@ class GA_Optimizer(object):
             fitness_pairs.append((ch, self.evaluate_fitness(ch, patterns_arr)))
         fitness_pairs.sort(key=lambda x: x[1], reverse=True)
         chosen_pattern = fitness_pairs[0][0]
-        print(fitness_pairs[0])
-        print(sum(chosen_pattern[i] for i in range(1, len(chosen_pattern), 2)))
+        end_time = time.time()
+        # print(fitness_pairs[0])
+        # print(sum(chosen_pattern[i] for i in range(1, len(chosen_pattern), 2)))
         plt.plot(range(1, len(best_results) + 1), best_results)
         plt.xlabel('Iteration')
-        plt.ylabel('Best result')
+        plt.ylabel('Fitness')
         plt.show()
         stocks = []
         for i in range(0, len(chosen_pattern), 2):
@@ -185,6 +194,10 @@ class GA_Optimizer(object):
             repeat = chosen_pattern[i + 1]
             for j in range(repeat):
                 stocks.append(actual_pattern)
+        # print(stocks)
+        # with open('best_config_ga.csv', 'a') as file:
+        #     file.write(
+        #         f'{self.POPULATION_SIZE},{self.penalty},{self.mutation_rate},{problem_path},{len(stocks)},{fitness_pairs[0][1]},{iter_cnt},{end_time - start}\n')
         return stocks
 
     def optimize(self, problem_path, queue=None):
@@ -193,11 +206,11 @@ class GA_Optimizer(object):
         patterns = self.generate_efficient_patterns()
         max_repeat = self.calculate_max_pattern_repetition(patterns)
         initial_population = self.initialize_population(max_repeat)
-        stocks = self.run(initial_population, patterns, max_repeat)
+        stocks = self.run(initial_population, patterns, max_repeat, problem_path)
         if queue is not None:
             queue.put((self.stock_length, self.l_arr, self.d_arr, stocks))
 
 
 if __name__ == '__main__':
     optimizer = GA_Optimizer()
-    optimizer.optimize('data/problem2.txt')
+    optimizer.optimize('data/problem10.txt')

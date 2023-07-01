@@ -3,15 +3,19 @@ from copy import deepcopy
 from math import sqrt
 import matplotlib.pyplot as plt
 from data_reader import DataReader
+import time
 
 
 class EP_Optimizer(object):
 
-    def __init__(self):
+    def __init__(self, q=10, num_3ps=2, population_size=100, gene_choice='heuristic'):
         self.MAX_ITERATIONS = 1000
-        self.POPULATION_SIZE = 100
+        self.POPULATION_SIZE = population_size
         self.stock_length = None
         self.demand = []
+        self.q = q
+        self.num_3ps = num_3ps
+        self.gene_choice = gene_choice
 
     def generate_initial_population(self):
         population = []
@@ -48,24 +52,35 @@ class EP_Optimizer(object):
     def generate_child(self, chromosome, repeat=2):
         child = deepcopy(chromosome)
         for _ in range(repeat):
-            ind1 = randint(0, len(child) - 1)
-            stocks = self.get_stocks_from_chromosome(child)
-            probabilities = self.calculate_stocks_probabilities(stocks)
-            chosen_stocks = choices(stocks, weights=probabilities, k=2)
-            stock1_ind = stocks.index(chosen_stocks[0])
-            stock2_ind = stocks.index(chosen_stocks[1])
-            ind2_in_stock = randint(0, len(chosen_stocks[0]) - 1)
-            ind3_in_stock = randint(0, len(chosen_stocks[1]) - 1)
-            ind2 = ind3 = 0
-            for i in range(stock1_ind):
-                ind2 += len(stocks[i])
-            ind2 += ind2_in_stock
-            for i in range(stock2_ind):
-                ind3 += len(stocks[i])
-            ind3 += ind3_in_stock
+            if self.gene_choice == 'random':
+                ind1, ind2, ind3 = self.random_gene_choice(child)
+            else:
+                ind1, ind2, ind3 = self.heuristic_gene_choice(child)
             child[ind1], child[ind2] = child[ind2], child[ind1]
             child[ind1], child[ind3] = child[ind3], child[ind1]
         return child
+
+    @staticmethod
+    def random_gene_choice(chromosome):
+        return choices(range(0, len(chromosome)), k=3)
+
+    def heuristic_gene_choice(self, child):
+        ind1 = randint(0, len(child) - 1)
+        stocks = self.get_stocks_from_chromosome(child)
+        probabilities = self.calculate_stocks_probabilities(stocks)
+        chosen_stocks = choices(stocks, weights=probabilities, k=2)
+        stock1_ind = stocks.index(chosen_stocks[0])
+        stock2_ind = stocks.index(chosen_stocks[1])
+        ind2_in_stock = randint(0, len(chosen_stocks[0]) - 1)
+        ind3_in_stock = randint(0, len(chosen_stocks[1]) - 1)
+        ind2 = ind3 = 0
+        for i in range(stock1_ind):
+            ind2 += len(stocks[i])
+        ind2 += ind2_in_stock
+        for i in range(stock2_ind):
+            ind3 += len(stocks[i])
+        ind3 += ind3_in_stock
+        return ind1, ind2, ind3
 
     def calculate_stocks_probabilities(self, stocks):
         wastage_arr = [self.stock_length - sum(stock) for stock in stocks]
@@ -73,7 +88,7 @@ class EP_Optimizer(object):
         return [sqrt(1 / waste) / w_sum if waste > 0 else 0 for waste in wastage_arr]
 
     def tournament(self, all_chromosomes):
-        Q = 10
+        Q = self.q
         num_wins = [[ch, 0] for ch in all_chromosomes]
         costs = [self.calculate_cost(ch) for ch in all_chromosomes]
         for i in range(len(all_chromosomes)):
@@ -87,6 +102,7 @@ class EP_Optimizer(object):
         return [num_wins[i][0] for i in range(self.POPULATION_SIZE)]
 
     def optimize(self, problem_path, queue=None):
+        start = time.time()
         self.demand = []
         self.stock_length, l_arr, d_arr = DataReader.read(problem_path)
         for i in range(len(l_arr)):
@@ -100,7 +116,7 @@ class EP_Optimizer(object):
             iter_cnt += 1
             children = []
             for chromosome in population:
-                children.append(self.generate_child(chromosome))
+                children.append(self.generate_child(chromosome, repeat=self.num_3ps))
             population = deepcopy(self.tournament(population + children))
             least_cost_for_iter = self.calculate_cost(population[0])
             results.append(least_cost_for_iter)
@@ -109,26 +125,32 @@ class EP_Optimizer(object):
             else:
                 num_iters_same_result = 0
             last_result = least_cost_for_iter
+            # if least_cost_for_iter == 0:
+            #     print('COST IS ZERO')
 
-            if least_cost_for_iter == 0 or iter_cnt > self.MAX_ITERATIONS or num_iters_same_result >= 30:
+            if least_cost_for_iter == 0 or iter_cnt > self.MAX_ITERATIONS or num_iters_same_result >= 50:
                 solution = population[0]
                 stocks = self.get_stocks_from_chromosome(solution)
-                print('ITERATION')
-                print(iter_cnt)
-                print('COST')
-                print(least_cost_for_iter)
-                print('NUMBER OF STOCKS')
-                print(len(stocks))
+                # print('ITERATION')
+                # print(iter_cnt)
+                # print('COST')
+                # print(least_cost_for_iter)
+                # print('NUMBER OF STOCKS')
+                # print(len(stocks))
                 break
+        end_time = time.time()
         plt.plot(range(1, len(results) + 1), results)
         plt.xlabel('Iteration')
-        plt.ylabel('Best result')
+        plt.ylabel('Fitness')
         plt.show()
         if queue is not None:
             queue.put((self.stock_length, l_arr, d_arr, stocks))
+        # with open('best_config_ep2.csv', 'a') as file:
+        #     file.write(
+        #         f'{self.q},{self.num_3ps},{self.POPULATION_SIZE},{self.gene_choice},{problem_path},{len(stocks)},{least_cost_for_iter},{iter_cnt},{end_time - start}\n')
         return self.stock_length, l_arr, d_arr, stocks
 
 
 if __name__ == '__main__':
     optimizer = EP_Optimizer()
-    optimizer.optimize('data/problem3.txt')
+    optimizer.optimize('data/problem10.txt')
